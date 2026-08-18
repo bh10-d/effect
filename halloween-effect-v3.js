@@ -1,30 +1,24 @@
 /**
- * ShopBase Halloween Atmosphere v3
- * =================================
+ * ShopBase Halloween Effect v3
+ * ============================
  *
- * Premium / minimal Halloween atmosphere.
+ * Premium Halloween storefront decoration.
  *
- * Behaviours:
- * - Leaves      -> falling + drifting
- * - Bats       -> flying horizontally
- * - Ghosts     -> floating
- * - Pumpkins   -> slow drifting
- * - Spiders    -> hanging from silk
- * - Webs       -> decorative corners
- * - Moon       -> atmospheric
- * - Stars      -> subtle twinkle
- * - Witch hats -> floating
- * - Tombstones -> very rare atmospheric objects
- *
- * No dependencies.
- * No external assets.
- * No emoji.
+ * Features:
+ * - Canvas based
+ * - No dependencies
+ * - No external assets
+ * - No emoji
+ * - 10 Halloween objects
+ * - Configurable size / opacity / intensity
+ * - Mobile optimized
+ * - pointer-events: none
+ * - Lightweight
  *
  * Usage:
  *
  * <script
- *   src="https://cdn.jsdelivr.net/gh/bh10-d/effect/halloween-effect-v3.js"
- *   defer>
+ *   src="https://cdn.jsdelivr.net/gh/bh10-d/effect/halloween-effect-v3.js?v=1">
  * </script>
  */
 
@@ -36,2217 +30,1807 @@
   // ============================================================
 
   const CONFIG = {
-    /**
-     * Overall intensity.
+    /*
+     * Overall effect intensity.
      *
-     * 0.4 = extremely subtle
-     * 0.6 = subtle
-     * 0.8 = recommended
-     * 1.0 = normal
-     * 1.3 = strong
+     * 0.5 = subtle
+     * 0.8 = normal
+     * 1.0 = strong
      */
-    intensity: 0.8,
+    intensity: 0.9,
 
-    /**
+    /*
      * Overall opacity.
+     *
+     * 0.5 = subtle
+     * 0.8 = slightly transparent
+     * 1.0 = full
      */
-    opacity: 0.72,
+    opacity: 1.0,
 
-    /**
-     * Base number of atmospheric objects.
+    /*
+     * Global object size.
+     *
+     * 1.0 = original
+     * 2.0 = 2x
+     * 3.0 = 3x
      */
-    maxParticles: 30,
+    sizeMultiplier: 3,
 
-    /**
+    /*
+     * Maximum number of particles.
+     */
+    maxParticles: 70,
+
+    /*
      * Mobile particle multiplier.
      */
-    mobileMultiplier: 0.45,
+    mobileMultiplier: 0.5,
 
-    /**
-     * Global animation speed.
+    /*
+     * Animation speed.
      */
-    speed: 1,
+    speed: 1.3,
 
-    /**
+    /*
      * Canvas layer.
      */
     zIndex: 9999,
 
-    /**
-     * Respect prefers-reduced-motion.
+    /*
+     * Enable / disable individual categories.
      */
-    respectReducedMotion: true,
-
-    /**
-     * Enable debug logs.
-     */
-    debug: true
+    pumpkin: true,
+    bat: true,
+    ghost: true,
+    spider: true,
+    web: true,
+    witchHat: true,
+    moon: true,
+    star: true,
+    leaf: true,
+    tombstone: true
   };
 
   // ============================================================
-  // DEBUG
+  // CONSTANTS
   // ============================================================
 
-  function log(...args) {
-    if (CONFIG.debug) {
-      console.log(
-        "[ShopBase Halloween]",
-        ...args
-      );
-    }
-  }
+  const TYPE = {
+    LEAF: "leaf",
+    BAT: "bat",
+    PUMPKIN: "pumpkin",
+    GHOST: "ghost",
+    SPIDER: "spider",
+    WEB: "web",
+    WITCH_HAT: "witchHat",
+    MOON: "moon",
+    STAR: "star",
+    TOMBSTONE: "tombstone"
+  };
 
   // ============================================================
-  // DOM SAFE INITIALIZATION
+  // HELPERS
   // ============================================================
 
-  function init() {
-    log("Initializing Halloween Atmosphere v3...");
+  const random = (min, max) =>
+    Math.random() * (max - min) + min;
 
-    if (!document.body) {
-      log("Body is not ready. Retrying...");
+  const pick = (array) =>
+    array[
+      Math.floor(
+        Math.random() * array.length
+      )
+    ];
 
-      setTimeout(
-        init,
-        50
-      );
-
-      return;
-    }
-
-    // Prevent duplicate initialization.
-    if (
-      window.ShopBaseHalloweenEffect &&
-      window.ShopBaseHalloweenEffect.initialized
-    ) {
-      log("Effect already initialized.");
-
-      return;
-    }
-
-    // Respect accessibility settings.
-    if (
-      CONFIG.respectReducedMotion &&
-      window.matchMedia &&
-      window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-      ).matches
-    ) {
-      log(
-        "Disabled because prefers-reduced-motion is enabled."
-      );
-
-      return;
-    }
-
-    createEffect();
-  }
-
-  // ============================================================
-  // EFFECT
-  // ============================================================
-
-  function createEffect() {
-    // ----------------------------------------------------------
-    // CONSTANTS
-    // ----------------------------------------------------------
-
-    const TYPE = {
-      LEAF: "leaf",
-      BAT: "bat",
-      GHOST: "ghost",
-      PUMPKIN: "pumpkin",
-      SPIDER: "spider",
-      WEB: "web",
-      MOON: "moon",
-      STAR: "star",
-      WITCH_HAT: "witchHat",
-      TOMBSTONE: "tombstone"
-    };
-
-    // ----------------------------------------------------------
-    // HELPERS
-    // ----------------------------------------------------------
-
-    const random = (
-      min,
-      max
-    ) =>
-      Math.random() *
-        (max - min) +
-      min;
-
-    const clamp = (
-      value,
-      min,
-      max
-    ) =>
-      Math.max(
-        min,
-        Math.min(
-          max,
-          value
-        )
-      );
-
-    // ----------------------------------------------------------
-    // CANVAS
-    // ----------------------------------------------------------
-
-    const canvas =
-      document.createElement(
-        "canvas"
-      );
-
-    canvas.id =
-      "shopbase-halloween-atmosphere";
-
-    Object.assign(
-      canvas.style,
-      {
-        position: "fixed",
-        top: "0",
-        left: "0",
-        width: "100%",
-        height: "100%",
-        pointerEvents: "none",
-        userSelect: "none",
-        touchAction: "none",
-        zIndex:
-          String(
-            CONFIG.zIndex
-          )
-      }
+  const clamp = (value, min, max) =>
+    Math.min(
+      max,
+      Math.max(min, value)
     );
 
-    document.body.appendChild(
-      canvas
+  // ============================================================
+  // CANVAS
+  // ============================================================
+
+  const canvas =
+    document.createElement("canvas");
+
+  canvas.id =
+    "shopbase-halloween-effect";
+
+  Object.assign(
+    canvas.style,
+    {
+      position: "fixed",
+      inset: "0",
+      width: "100%",
+      height: "100%",
+      pointerEvents: "none",
+      userSelect: "none",
+      touchAction: "none",
+      zIndex: String(CONFIG.zIndex)
+    }
+  );
+
+  document.body.appendChild(canvas);
+
+  const ctx =
+    canvas.getContext("2d", {
+      alpha: true
+    });
+
+  let width =
+    window.innerWidth;
+
+  let height =
+    window.innerHeight;
+
+  let dpr =
+    Math.min(
+      window.devicePixelRatio || 1,
+      2
     );
 
-    const ctx =
-      canvas.getContext(
-        "2d",
-        {
-          alpha: true
-        }
-      );
-
-    if (!ctx) {
-      console.error(
-        "[ShopBase Halloween] Canvas is not supported."
-      );
-
-      return;
-    }
-
-    let width =
+  function resize() {
+    width =
       window.innerWidth;
 
-    let height =
+    height =
       window.innerHeight;
 
-    let dpr =
+    dpr =
       Math.min(
-        window.devicePixelRatio ||
-          1,
+        window.devicePixelRatio || 1,
         2
       );
 
-    // ----------------------------------------------------------
-    // RESIZE
-    // ----------------------------------------------------------
+    canvas.width =
+      width * dpr;
 
-    function resize() {
-      width =
-        window.innerWidth;
+    canvas.height =
+      height * dpr;
 
-      height =
-        window.innerHeight;
+    canvas.style.width =
+      `${width}px`;
 
-      dpr =
-        Math.min(
-          window.devicePixelRatio ||
-            1,
-          2
-        );
+    canvas.style.height =
+      `${height}px`;
 
-      canvas.width =
-        width * dpr;
+    ctx.setTransform(
+      dpr,
+      0,
+      0,
+      dpr,
+      0,
+      0
+    );
+  }
 
-      canvas.height =
-        height * dpr;
+  resize();
 
-      canvas.style.width =
-        `${width}px`;
+  window.addEventListener(
+    "resize",
+    resize,
+    {
+      passive: true
+    }
+  );
 
-      canvas.style.height =
-        `${height}px`;
+  // ============================================================
+  // TYPE WEIGHTS
+  // ============================================================
 
-      ctx.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0
+  const TYPE_POOL = [
+    {
+      type: TYPE.LEAF,
+      weight: 25
+    },
+
+    {
+      type: TYPE.BAT,
+      weight: 20
+    },
+
+    {
+      type: TYPE.PUMPKIN,
+      weight: 13
+    },
+
+    {
+      type: TYPE.GHOST,
+      weight: 11
+    },
+
+    {
+      type: TYPE.SPIDER,
+      weight: 7
+    },
+
+    {
+      type: TYPE.WITCH_HAT,
+      weight: 6
+    },
+
+    {
+      type: TYPE.STAR,
+      weight: 6
+    },
+
+    {
+      type: TYPE.MOON,
+      weight: 4
+    },
+
+    {
+      type: TYPE.WEB,
+      weight: 5
+    },
+
+    {
+      type: TYPE.TOMBSTONE,
+      weight: 3
+    }
+  ];
+
+  function isEnabled(type) {
+    switch (type) {
+      case TYPE.LEAF:
+        return CONFIG.leaf;
+
+      case TYPE.BAT:
+        return CONFIG.bat;
+
+      case TYPE.PUMPKIN:
+        return CONFIG.pumpkin;
+
+      case TYPE.GHOST:
+        return CONFIG.ghost;
+
+      case TYPE.SPIDER:
+        return CONFIG.spider;
+
+      case TYPE.WEB:
+        return CONFIG.web;
+
+      case TYPE.WITCH_HAT:
+        return CONFIG.witchHat;
+
+      case TYPE.MOON:
+        return CONFIG.moon;
+
+      case TYPE.STAR:
+        return CONFIG.star;
+
+      case TYPE.TOMBSTONE:
+        return CONFIG.tombstone;
+
+      default:
+        return false;
+    }
+  }
+
+  function getRandomType() {
+    const enabled =
+      TYPE_POOL.filter(
+        item =>
+          isEnabled(item.type)
       );
+
+    if (!enabled.length) {
+      return TYPE.LEAF;
     }
 
-    resize();
+    const totalWeight =
+      enabled.reduce(
+        (sum, item) =>
+          sum + item.weight,
+        0
+      );
 
-    // ==========================================================
-    // PARTICLE FACTORY
-    // ==========================================================
+    let value =
+      Math.random() *
+      totalWeight;
 
-    function createParticle(
+    for (const item of enabled) {
+      value -= item.weight;
+
+      if (value <= 0) {
+        return item.type;
+      }
+    }
+
+    return enabled[0].type;
+  }
+
+  // ============================================================
+  // PARTICLE CREATION
+  // ============================================================
+
+  function createParticle(
+    initial = false
+  ) {
+    const type =
+      getRandomType();
+
+    const particle = {
       type,
-      initial = false
-    ) {
-      const particle = {
-        type,
 
-        x:
-          random(
-            -100,
-            width + 100
-          ),
+      x:
+        random(
+          -100,
+          width + 100
+        ),
 
-        y:
-          initial
-            ? random(
-                -height,
-                height
-              )
-            : random(
-                -160,
-                -40
-              ),
+      y:
+        initial
+          ? random(
+              -height,
+              height
+            )
+          : random(
+              -180,
+              -40
+            ),
 
-        size:
-          random(
-            10,
-            20
-          ),
+      size:
+        random(
+          10,
+          20
+        ),
 
-        speed:
-          random(
-            0.2,
-            0.8
-          ) *
-          CONFIG.speed,
+      speed:
+        random(
+          0.4,
+          1
+        ) * CONFIG.speed,
 
-        opacity:
-          random(
-            0.3,
-            0.8
-          ),
+      drift:
+        random(
+          0.4,
+          1.5
+        ),
 
-        rotation:
-          random(
-            0,
-            Math.PI * 2
-          ),
+      driftPhase:
+        random(
+          0,
+          Math.PI * 2
+        ),
 
-        rotationSpeed:
-          random(
-            -0.015,
-            0.015
-          ),
+      driftSpeed:
+        random(
+          0.006,
+          0.018
+        ),
 
-        phase:
-          random(
-            0,
-            Math.PI * 2
-          ),
+      rotation:
+        random(
+          0,
+          Math.PI * 2
+        ),
 
-        phaseSpeed:
-          random(
-            0.006,
-            0.02
-          ),
+      rotationSpeed:
+        random(
+          -0.02,
+          0.02
+        ),
 
-        drift:
-          random(
-            0.3,
-            1.5
-          ),
+      opacity:
+        random(
+          0.65,
+          0.95
+        )
+    };
 
-        direction:
-          Math.random() >
-          0.5
-            ? 1
-            : -1,
-
-        life:
-          random(
-            0,
-            Math.PI * 2
-          )
-      };
+    switch (type) {
 
       // --------------------------------------------------------
       // LEAF
       // --------------------------------------------------------
 
-      if (
-        type === TYPE.LEAF
-      ) {
+      case TYPE.LEAF:
         particle.size =
-          random(
-            7,
-            14
-          );
+          random(9, 18);
 
         particle.speed =
           random(
-            0.35,
-            0.9
-          ) *
-          CONFIG.speed;
-
-        particle.drift =
-          random(
-            0.8,
-            1.8
-          );
+            0.45,
+            1.1
+          ) * CONFIG.speed;
 
         particle.rotationSpeed =
           random(
-            -0.035,
-            0.035
+            -0.03,
+            0.03
           );
-      }
+
+        particle.opacity =
+          random(
+            0.7,
+            0.95
+          );
+
+        break;
 
       // --------------------------------------------------------
       // BAT
       // --------------------------------------------------------
 
-      if (
-        type === TYPE.BAT
-      ) {
+      case TYPE.BAT:
         particle.size =
-          random(
-            10,
-            18
-          );
-
-        particle.y =
-          initial
-            ? random(
-                50,
-                height * 0.65
-              )
-            : random(
-                50,
-                height * 0.7
-              );
-
-        particle.x =
-          particle.direction ===
-          1
-            ? -80
-            : width + 80;
+          random(14, 25);
 
         particle.speed =
-          random(
-            0.7,
-            1.5
-          ) *
-          CONFIG.speed;
-
-        particle.drift =
-          random(
-            1,
-            2.5
-          );
-
-        particle.opacity =
           random(
             0.25,
             0.65
-          );
-      }
-
-      // --------------------------------------------------------
-      // GHOST
-      // --------------------------------------------------------
-
-      if (
-        type === TYPE.GHOST
-      ) {
-        particle.size =
-          random(
-            17,
-            28
-          );
-
-        particle.speed =
-          random(
-            0.12,
-            0.35
-          ) *
-          CONFIG.speed;
+          ) * CONFIG.speed;
 
         particle.drift =
           random(
-            1,
+            0.8,
             2
           );
 
+        particle.rotationSpeed = 0;
+
         particle.opacity =
           random(
-            0.12,
-            0.32
+            0.75,
+            1
           );
-      }
+
+        break;
 
       // --------------------------------------------------------
       // PUMPKIN
       // --------------------------------------------------------
 
-      if (
-        type === TYPE.PUMPKIN
-      ) {
+      case TYPE.PUMPKIN:
         particle.size =
-          random(
-            11,
-            20
-          );
+          random(16, 28);
 
         particle.speed =
           random(
-            0.12,
-            0.4
-          ) *
-          CONFIG.speed;
-
-        particle.drift =
-          random(
-            0.6,
-            1.2
-          );
-
-        particle.opacity =
-          random(
-            0.25,
-            0.65
-          );
+            0.35,
+            0.8
+          ) * CONFIG.speed;
 
         particle.rotationSpeed =
           random(
             -0.012,
             0.012
           );
-      }
+
+        particle.opacity =
+          random(
+            0.8,
+            1
+          );
+
+        break;
+
+      // --------------------------------------------------------
+      // GHOST
+      // --------------------------------------------------------
+
+      case TYPE.GHOST:
+        particle.size =
+          random(20, 34);
+
+        particle.speed =
+          random(
+            0.25,
+            0.55
+          ) * CONFIG.speed;
+
+        particle.opacity =
+          random(
+            0.55,
+            0.85
+          );
+
+        particle.drift =
+          random(
+            0.7,
+            1.4
+          );
+
+        break;
 
       // --------------------------------------------------------
       // SPIDER
       // --------------------------------------------------------
 
-      if (
-        type === TYPE.SPIDER
-      ) {
+      case TYPE.SPIDER:
         particle.size =
-          random(
-            8,
-            14
-          );
-
-        particle.x =
-          random(
-            20,
-            width - 20
-          );
-
-        particle.y =
-          random(
-            -20,
-            height * 0.45
-          );
+          random(12, 22);
 
         particle.speed =
           random(
-            0.08,
-            0.25
-          ) *
-          CONFIG.speed;
+            0.45,
+            0.9
+          ) * CONFIG.speed;
 
-        particle.threadLength =
-          random(
-            40,
-            150
-          );
+        particle.drift =
+          0.25;
+
+        particle.rotationSpeed = 0;
 
         particle.opacity =
           random(
-            0.25,
-            0.65
+            0.75,
+            1
           );
-      }
+
+        break;
 
       // --------------------------------------------------------
       // WEB
       // --------------------------------------------------------
 
-      if (
-        type === TYPE.WEB
-      ) {
+      case TYPE.WEB:
         particle.size =
-          random(
-            35,
-            70
-          );
-
-        particle.speed = 0;
-
-        particle.opacity =
-          random(
-            0.08,
-            0.22
-          );
-
-        particle.rotation =
-          random(
-            0,
-            Math.PI * 2
-          );
-
-        particle.x =
-          Math.random() >
-          0.5
-            ? random(
-                -20,
-                100
-              )
-            : random(
-                width - 100,
-                width + 20
-              );
-
-        particle.y =
-          Math.random() >
-          0.5
-            ? random(
-                -20,
-                100
-              )
-            : random(
-                height - 100,
-                height + 20
-              );
-      }
-
-      // --------------------------------------------------------
-      // MOON
-      // --------------------------------------------------------
-
-      if (
-        type === TYPE.MOON
-      ) {
-        particle.size =
-          random(
-            22,
-            38
-          );
+          random(25, 45);
 
         particle.speed =
-          0.01;
+          random(
+            0.18,
+            0.4
+          ) * CONFIG.speed;
 
         particle.opacity =
           random(
-            0.15,
-            0.3
+            0.45,
+            0.7
           );
 
-        particle.x =
+        particle.rotationSpeed =
           random(
-            30,
-            width - 30
+            -0.005,
+            0.005
           );
 
-        particle.y =
-          random(
-            40,
-            height * 0.35
-          );
-      }
-
-      // --------------------------------------------------------
-      // STAR
-      // --------------------------------------------------------
-
-      if (
-        type === TYPE.STAR
-      ) {
-        particle.size =
-          random(
-            3,
-            7
-          );
-
-        particle.speed =
-          0;
-
-        particle.opacity =
-          random(
-            0.15,
-            0.5
-          );
-
-        particle.x =
-          random(
-            0,
-            width
-          );
-
-        particle.y =
-          random(
-            0,
-            height * 0.65
-          );
-      }
+        break;
 
       // --------------------------------------------------------
       // WITCH HAT
       // --------------------------------------------------------
 
-      if (
-        type === TYPE.WITCH_HAT
-      ) {
+      case TYPE.WITCH_HAT:
         particle.size =
-          random(
-            12,
-            21
-          );
+          random(18, 30);
 
         particle.speed =
           random(
-            0.08,
-            0.25
-          ) *
-          CONFIG.speed;
-
-        particle.drift =
-          random(
-            0.8,
-            1.5
-          );
+            0.35,
+            0.75
+          ) * CONFIG.speed;
 
         particle.opacity =
           random(
-            0.2,
-            0.55
+            0.75,
+            1
           );
-      }
+
+        break;
+
+      // --------------------------------------------------------
+      // MOON
+      // --------------------------------------------------------
+
+      case TYPE.MOON:
+        particle.size =
+          random(22, 38);
+
+        particle.speed =
+          random(
+            0.12,
+            0.3
+          ) * CONFIG.speed;
+
+        particle.opacity =
+          random(
+            0.55,
+            0.8
+          );
+
+        particle.drift =
+          random(
+            0.3,
+            0.8
+          );
+
+        break;
+
+      // --------------------------------------------------------
+      // STAR
+      // --------------------------------------------------------
+
+      case TYPE.STAR:
+        particle.size =
+          random(7, 14);
+
+        particle.speed =
+          random(
+            0.2,
+            0.45
+          ) * CONFIG.speed;
+
+        particle.opacity =
+          random(
+            0.65,
+            0.95
+          );
+
+        particle.rotationSpeed =
+          random(
+            -0.01,
+            0.01
+          );
+
+        break;
 
       // --------------------------------------------------------
       // TOMBSTONE
       // --------------------------------------------------------
 
-      if (
-        type === TYPE.TOMBSTONE
-      ) {
+      case TYPE.TOMBSTONE:
         particle.size =
-          random(
-            18,
-            30
-          );
+          random(22, 36);
 
         particle.speed =
           random(
-            0.05,
-            0.15
-          ) *
-          CONFIG.speed;
+            0.15,
+            0.35
+          ) * CONFIG.speed;
 
         particle.opacity =
           random(
-            0.08,
-            0.2
+            0.5,
+            0.75
           );
 
-        particle.x =
+        particle.drift =
           random(
-            30,
-            width - 30
+            0.25,
+            0.6
           );
-      }
 
-      return particle;
+        break;
     }
 
-    // ==========================================================
-    // TYPE DISTRIBUTION
-    // ==========================================================
+    return particle;
+  }
 
-    const typePool = [
-      {
-        type: TYPE.LEAF,
-        weight: 24
-      },
+  // ============================================================
+  // PARTICLE COUNT
+  // ============================================================
 
-      {
-        type: TYPE.BAT,
-        weight: 20
-      },
+  function getParticleCount() {
+    const isMobile =
+      window.innerWidth <= 768;
 
-      {
-        type: TYPE.GHOST,
-        weight: 9
-      },
+    const multiplier =
+      isMobile
+        ? CONFIG.mobileMultiplier
+        : 1;
 
-      {
-        type: TYPE.PUMPKIN,
-        weight: 9
-      },
+    return Math.round(
+      CONFIG.maxParticles *
+      CONFIG.intensity *
+      multiplier
+    );
+  }
 
-      {
-        type: TYPE.SPIDER,
-        weight: 8
-      },
+  const particles = [];
 
-      {
-        type: TYPE.WITCH_HAT,
-        weight: 7
-      },
+  function initializeParticles() {
+    particles.length = 0;
 
-      {
-        type: TYPE.STAR,
-        weight: 8
-      },
+    const count =
+      getParticleCount();
 
-      {
-        type: TYPE.WEB,
-        weight: 5
-      },
-
-      {
-        type: TYPE.MOON,
-        weight: 5
-      },
-
-      {
-        type: TYPE.TOMBSTONE,
-        weight: 2
-      }
-    ];
-
-    function chooseType() {
-      const total =
-        typePool.reduce(
-          (
-            sum,
-            item
-          ) =>
-            sum +
-            item.weight,
-          0
-        );
-
-      let value =
-        Math.random() *
-        total;
-
-      for (
-        const item
-        of typePool
-      ) {
-        value -=
-          item.weight;
-
-        if (
-          value <= 0
-        ) {
-          return item.type;
-        }
-      }
-
-      return TYPE.LEAF;
-    }
-
-    // ==========================================================
-    // PARTICLE COUNT
-    // ==========================================================
-
-    function getParticleCount() {
-      const isMobile =
-        window.innerWidth <=
-        768;
-
-      const multiplier =
-        isMobile
-          ? CONFIG.mobileMultiplier
-          : 1;
-
-      return Math.round(
-        CONFIG.maxParticles *
-        CONFIG.intensity *
-        multiplier
+    for (
+      let i = 0;
+      i < count;
+      i++
+    ) {
+      particles.push(
+        createParticle(true)
       );
     }
+  }
 
-    // ==========================================================
-    // PARTICLES
-    // ==========================================================
+  initializeParticles();
 
-    const particles = [];
+  // ============================================================
+  // DRAW HELPERS
+  // ============================================================
 
-    function initializeParticles() {
-      particles.length = 0;
-
-      const count =
-        getParticleCount();
-
-      for (
-        let i = 0;
-        i < count;
-        i++
-      ) {
-        particles.push(
-          createParticle(
-            chooseType(),
-            true
-          )
-        );
-      }
-
-      log(
-        `Created ${count} particles.`
+  function applyAlpha(p) {
+    ctx.globalAlpha =
+      clamp(
+        p.opacity *
+        CONFIG.opacity,
+        0,
+        1
       );
-    }
+  }
 
-    initializeParticles();
+  function getSize(p) {
+    return (
+      p.size *
+      CONFIG.sizeMultiplier
+    );
+  }
 
-    // ==========================================================
-    // DRAW HELPERS
-    // ==========================================================
+  // ============================================================
+  // DRAW: LEAF
+  // ============================================================
 
-    function beginParticle(p) {
-      ctx.save();
+  function drawLeaf(p) {
+    const s =
+      getSize(p);
 
-      ctx.translate(
-        p.x,
-        p.y
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    ctx.rotate(
+      p.rotation
+    );
+
+    applyAlpha(p);
+
+    ctx.fillStyle =
+      "rgba(126, 73, 39, 0.95)";
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      -s
+    );
+
+    ctx.bezierCurveTo(
+      s * 0.8,
+      -s * 0.45,
+      s * 0.8,
+      s * 0.55,
+      0,
+      s
+    );
+
+    ctx.bezierCurveTo(
+      -s * 0.8,
+      s * 0.55,
+      -s * 0.8,
+      -s * 0.45,
+      0,
+      -s
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      -s * 0.75
+    );
+
+    ctx.lineTo(
+      0,
+      s * 0.75
+    );
+
+    ctx.strokeStyle =
+      "rgba(50, 30, 20, 0.7)";
+
+    ctx.lineWidth = 1;
+
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW: BAT
+  // ============================================================
+
+  function drawBat(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    applyAlpha(p);
+
+    ctx.fillStyle =
+      "rgba(28, 24, 32, 0.98)";
+
+    // Body
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      0,
+      0,
+      s * 0.18,
+      s * 0.42,
+      0,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    // Left wing
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      -s * 0.1,
+      -s * 0.05
+    );
+
+    ctx.quadraticCurveTo(
+      -s * 0.65,
+      -s * 0.65,
+      -s,
+      -s * 0.25
+    );
+
+    ctx.quadraticCurveTo(
+      -s * 0.75,
+      s * 0.12,
+      -s * 0.3,
+      s * 0.3
+    );
+
+    ctx.quadraticCurveTo(
+      -s * 0.15,
+      s * 0.1,
+      -s * 0.1,
+      0
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    // Right wing
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      s * 0.1,
+      -s * 0.05
+    );
+
+    ctx.quadraticCurveTo(
+      s * 0.65,
+      -s * 0.65,
+      s,
+      -s * 0.25
+    );
+
+    ctx.quadraticCurveTo(
+      s * 0.75,
+      s * 0.12,
+      s * 0.3,
+      s * 0.3
+    );
+
+    ctx.quadraticCurveTo(
+      s * 0.15,
+      s * 0.1,
+      s * 0.1,
+      0
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW: PUMPKIN
+  // ============================================================
+
+  function drawPumpkin(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    ctx.rotate(
+      p.rotation
+    );
+
+    applyAlpha(p);
+
+    // Body
+
+    ctx.fillStyle =
+      "rgba(190, 78, 27, 0.98)";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      -s * 0.22,
+      0,
+      s * 0.4,
+      s * 0.55,
+      0,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.ellipse(
+      s * 0.22,
+      0,
+      s * 0.4,
+      s * 0.55,
+      0,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    // Stem
+
+    ctx.fillStyle =
+      "rgba(62, 82, 43, 1)";
+
+    ctx.fillRect(
+      -s * 0.08,
+      -s * 0.62,
+      s * 0.16,
+      s * 0.2
+    );
+
+    // Eyes
+
+    ctx.fillStyle =
+      "rgba(35, 22, 20, 1)";
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      -s * 0.38,
+      -s * 0.08
+    );
+
+    ctx.lineTo(
+      -s * 0.18,
+      -s * 0.18
+    );
+
+    ctx.lineTo(
+      -s * 0.25,
+      s * 0.02
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      s * 0.38,
+      -s * 0.08
+    );
+
+    ctx.lineTo(
+      s * 0.18,
+      -s * 0.18
+    );
+
+    ctx.lineTo(
+      s * 0.25,
+      s * 0.02
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    // Mouth
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      -s * 0.32,
+      s * 0.2
+    );
+
+    ctx.quadraticCurveTo(
+      0,
+      s * 0.45,
+      s * 0.32,
+      s * 0.2
+    );
+
+    ctx.strokeStyle =
+      "rgba(35, 22, 20, 1)";
+
+    ctx.lineWidth = 1.5;
+
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW: GHOST
+  // ============================================================
+
+  function drawGhost(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    applyAlpha(p);
+
+    ctx.fillStyle =
+      "rgba(245, 245, 245, 0.95)";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      0,
+      -s * 0.15,
+      s * 0.48,
+      Math.PI,
+      0
+    );
+
+    ctx.lineTo(
+      s * 0.48,
+      s * 0.55
+    );
+
+    ctx.quadraticCurveTo(
+      s * 0.25,
+      s * 0.32,
+      0,
+      s * 0.58
+    );
+
+    ctx.quadraticCurveTo(
+      -s * 0.25,
+      s * 0.32,
+      -s * 0.48,
+      s * 0.55
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    // Eyes
+
+    ctx.fillStyle =
+      "rgba(45, 38, 50, 0.9)";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      -s * 0.16,
+      -s * 0.2,
+      s * 0.055,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.arc(
+      s * 0.16,
+      -s * 0.2,
+      s * 0.055,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW: SPIDER
+  // ============================================================
+
+  function drawSpider(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    applyAlpha(p);
+
+    ctx.strokeStyle =
+      "rgba(35, 30, 38, 0.95)";
+
+    ctx.fillStyle =
+      "rgba(35, 30, 38, 0.98)";
+
+    ctx.lineWidth =
+      Math.max(
+        1,
+        s * 0.08
       );
 
-      ctx.rotate(
-        p.rotation
-      );
+    // Body
 
-      ctx.globalAlpha =
-        clamp(
-          p.opacity *
-            CONFIG.opacity,
-          0,
-          1
-        );
-    }
+    ctx.beginPath();
 
-    // ==========================================================
-    // LEAF
-    // ==========================================================
+    ctx.ellipse(
+      0,
+      0,
+      s * 0.3,
+      s * 0.42,
+      0,
+      0,
+      Math.PI * 2
+    );
 
-    function drawLeaf(p) {
-      const s =
-        p.size;
+    ctx.fill();
 
-      beginParticle(p);
+    // Legs
 
-      ctx.fillStyle =
-        "rgba(132, 73, 38, 0.9)";
+    for (
+      let i = 0;
+      i < 4;
+      i++
+    ) {
+      const y =
+        -s * 0.25 +
+        i * s * 0.16;
 
       ctx.beginPath();
 
       ctx.moveTo(
-        0,
-        -s
+        -s * 0.2,
+        y
       );
 
-      ctx.bezierCurveTo(
-        s * 0.9,
-        -s * 0.4,
-        s * 0.7,
-        s * 0.65,
-        0,
-        s
-      );
-
-      ctx.bezierCurveTo(
+      ctx.quadraticCurveTo(
         -s * 0.7,
-        s * 0.65,
-        -s * 0.9,
-        -s * 0.4,
-        0,
-        -s
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.strokeStyle =
-        "rgba(55, 30, 18, 0.45)";
-
-      ctx.lineWidth =
-        0.7;
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        0,
-        -s * 0.7
-      );
-
-      ctx.lineTo(
-        0,
-        s * 0.7
+        y - s * 0.15,
+        -s * 0.85,
+        y + s * 0.15
       );
 
       ctx.stroke();
 
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // BAT
-    // ==========================================================
-
-    function drawBat(p) {
-      const s =
-        p.size;
-
-      beginParticle(p);
-
-      ctx.fillStyle =
-        "rgba(25, 22, 30, 0.9)";
-
-      // Body
-      ctx.beginPath();
-
-      ctx.ellipse(
-        0,
-        0,
-        s * 0.17,
-        s * 0.42,
-        0,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-      // Wings
       ctx.beginPath();
 
       ctx.moveTo(
-        -s * 0.1,
-        0
+        s * 0.2,
+        y
       );
 
       ctx.quadraticCurveTo(
-        -s * 0.55,
-        -s * 0.65,
-        -s,
-        -s * 0.25
-      );
-
-      ctx.quadraticCurveTo(
-        -s * 0.75,
-        s * 0.12,
-        -s * 0.28,
-        s * 0.28
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        s * 0.1,
-        0
-      );
-
-      ctx.quadraticCurveTo(
-        s * 0.55,
-        -s * 0.65,
-        s,
-        -s * 0.25
-      );
-
-      ctx.quadraticCurveTo(
-        s * 0.75,
-        s * 0.12,
-        s * 0.28,
-        s * 0.28
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // GHOST
-    // ==========================================================
-
-    function drawGhost(p) {
-      const s =
-        p.size;
-
-      beginParticle(p);
-
-      ctx.fillStyle =
-        "rgba(245, 245, 245, 0.8)";
-
-      ctx.beginPath();
-
-      ctx.arc(
-        0,
-        -s * 0.1,
-        s * 0.48,
-        Math.PI,
-        0
-      );
-
-      ctx.lineTo(
-        s * 0.48,
-        s * 0.55
-      );
-
-      ctx.quadraticCurveTo(
-        s * 0.25,
-        s * 0.35,
-        0,
-        s * 0.6
-      );
-
-      ctx.quadraticCurveTo(
-        -s * 0.25,
-        s * 0.35,
-        -s * 0.48,
-        s * 0.55
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.fillStyle =
-        "rgba(40, 35, 45, 0.5)";
-
-      ctx.beginPath();
-
-      ctx.arc(
-        -s * 0.16,
-        -s * 0.18,
-        s * 0.055,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.arc(
-        s * 0.16,
-        -s * 0.18,
-        s * 0.055,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // PUMPKIN
-    // ==========================================================
-
-    function drawPumpkin(p) {
-      const s =
-        p.size;
-
-      beginParticle(p);
-
-      ctx.fillStyle =
-        "rgba(190, 76, 28, 0.85)";
-
-      ctx.beginPath();
-
-      ctx.ellipse(
-        -s * 0.22,
-        0,
-        s * 0.38,
-        s * 0.48,
-        0,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.ellipse(
-        s * 0.22,
-        0,
-        s * 0.38,
-        s * 0.48,
-        0,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-      // Stem
-      ctx.fillStyle =
-        "rgba(65, 80, 40, 0.85)";
-
-      ctx.fillRect(
-        -s * 0.08,
-        -s * 0.58,
-        s * 0.16,
-        s * 0.18
-      );
-
-      // Face
-      ctx.fillStyle =
-        "rgba(35, 22, 20, 0.9)";
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        -s * 0.35,
-        -s * 0.05
-      );
-
-      ctx.lineTo(
-        -s * 0.18,
-        -s * 0.14
-      );
-
-      ctx.lineTo(
-        -s * 0.24,
-        s * 0.02
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        s * 0.35,
-        -s * 0.05
-      );
-
-      ctx.lineTo(
-        s * 0.18,
-        -s * 0.14
-      );
-
-      ctx.lineTo(
-        s * 0.24,
-        s * 0.02
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        -s * 0.28,
-        s * 0.2
-      );
-
-      ctx.quadraticCurveTo(
-        0,
-        s * 0.4,
-        s * 0.28,
-        s * 0.2
-      );
-
-      ctx.strokeStyle =
-        "rgba(35, 22, 20, 0.9)";
-
-      ctx.lineWidth =
-        1;
-
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // SPIDER
-    // ==========================================================
-
-    function drawSpider(p) {
-      const s =
-        p.size;
-
-      ctx.save();
-
-      ctx.globalAlpha =
-        clamp(
-          p.opacity *
-            CONFIG.opacity,
-          0,
-          1
-        );
-
-      ctx.strokeStyle =
-        "rgba(35, 30, 38, 0.75)";
-
-      ctx.lineWidth =
-        0.7;
-
-      // Silk thread
-      ctx.beginPath();
-
-      ctx.moveTo(
-        p.x,
-        0
-      );
-
-      ctx.lineTo(
-        p.x,
-        p.y
+        s * 0.7,
+        y - s * 0.15,
+        s * 0.85,
+        y + s * 0.15
       );
 
       ctx.stroke();
+    }
 
-      ctx.translate(
-        p.x,
-        p.y
-      );
+    ctx.restore();
+  }
 
-      // Body
-      ctx.fillStyle =
-        "rgba(30, 27, 35, 0.9)";
+  // ============================================================
+  // DRAW: WEB
+  // ============================================================
+
+  function drawWeb(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    ctx.rotate(
+      p.rotation
+    );
+
+    applyAlpha(p);
+
+    ctx.strokeStyle =
+      "rgba(80, 70, 85, 0.95)";
+
+    ctx.lineWidth = 1;
+
+    const arms = 8;
+
+    for (
+      let i = 0;
+      i < arms;
+      i++
+    ) {
+      const angle =
+        (Math.PI * 2 * i) /
+        arms;
 
       ctx.beginPath();
 
-      ctx.ellipse(
+      ctx.moveTo(
         0,
-        0,
-        s * 0.3,
-        s * 0.42,
-        0,
-        0,
-        Math.PI * 2
+        0
       );
 
-      ctx.fill();
+      ctx.lineTo(
+        Math.cos(angle) * s,
+        Math.sin(angle) * s
+      );
 
-      // Legs
-      for (
-        let i = 0;
-        i < 4;
-        i++
-      ) {
-        const yy =
-          -s * 0.28 +
-          i *
-            s *
-            0.18;
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-          -s * 0.18,
-          yy
-        );
-
-        ctx.quadraticCurveTo(
-          -s * 0.65,
-          yy -
-            s * 0.12,
-          -s * 0.85,
-          yy +
-            s * 0.12
-        );
-
-        ctx.stroke();
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-          s * 0.18,
-          yy
-        );
-
-        ctx.quadraticCurveTo(
-          s * 0.65,
-          yy -
-            s * 0.12,
-          s * 0.85,
-          yy +
-            s * 0.12
-        );
-
-        ctx.stroke();
-      }
-
-      ctx.restore();
+      ctx.stroke();
     }
 
-    // ==========================================================
-    // WEB
-    // ==========================================================
+    for (
+      let ring = 1;
+      ring <= 4;
+      ring++
+    ) {
+      const radius =
+        (s / 4) * ring;
 
-    function drawWeb(p) {
-      const s =
-        p.size;
-
-      beginParticle(p);
-
-      ctx.strokeStyle =
-        "rgba(85, 75, 90, 0.8)";
-
-      ctx.lineWidth =
-        0.65;
-
-      const arms =
-        8;
+      ctx.beginPath();
 
       for (
         let i = 0;
-        i < arms;
+        i <= arms;
         i++
       ) {
         const angle =
           (Math.PI * 2 * i) /
           arms;
 
-        ctx.beginPath();
-
-        ctx.moveTo(
-          0,
-          0
-        );
-
-        ctx.lineTo(
+        const x =
           Math.cos(angle) *
-            s,
+          radius;
+
+        const y =
           Math.sin(angle) *
-            s
-        );
-
-        ctx.stroke();
-      }
-
-      for (
-        let ring = 1;
-        ring <= 4;
-        ring++
-      ) {
-        const radius =
-          (s / 4) *
-          ring;
-
-        ctx.beginPath();
-
-        for (
-          let i = 0;
-          i <= arms;
-          i++
-        ) {
-          const angle =
-            (Math.PI * 2 * i) /
-            arms;
-
-          const x =
-            Math.cos(angle) *
-            radius;
-
-          const y =
-            Math.sin(angle) *
-            radius;
-
-          if (
-            i === 0
-          ) {
-            ctx.moveTo(
-              x,
-              y
-            );
-          } else {
-            ctx.lineTo(
-              x,
-              y
-            );
-          }
-        }
-
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // MOON
-    // ==========================================================
-
-    function drawMoon(p) {
-      const s =
-        p.size;
-
-      ctx.save();
-
-      ctx.globalAlpha =
-        clamp(
-          p.opacity *
-            CONFIG.opacity,
-          0,
-          1
-        );
-
-      ctx.fillStyle =
-        "rgba(210, 198, 158, 0.8)";
-
-      ctx.beginPath();
-
-      ctx.arc(
-        p.x,
-        p.y,
-        s,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-      ctx.globalCompositeOperation =
-        "destination-out";
-
-      ctx.beginPath();
-
-      ctx.arc(
-        p.x +
-          s * 0.42,
-        p.y -
-          s * 0.18,
-        s * 0.9,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-      ctx.globalCompositeOperation =
-        "source-over";
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // STAR
-    // ==========================================================
-
-    function drawStar(p) {
-      const s =
-        p.size;
-
-      ctx.save();
-
-      ctx.translate(
-        p.x,
-        p.y
-      );
-
-      ctx.globalAlpha =
-        clamp(
-          p.opacity *
-            CONFIG.opacity,
-          0,
-          1
-        );
-
-      ctx.fillStyle =
-        "rgba(220, 200, 145, 0.85)";
-
-      ctx.beginPath();
-
-      ctx.arc(
-        0,
-        0,
-        s,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // WITCH HAT
-    // ==========================================================
-
-    function drawWitchHat(p) {
-      const s =
-        p.size;
-
-      beginParticle(p);
-
-      ctx.fillStyle =
-        "rgba(42, 28, 55, 0.85)";
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        0,
-        -s
-      );
-
-      ctx.lineTo(
-        s * 0.42,
-        s * 0.3
-      );
-
-      ctx.lineTo(
-        -s * 0.42,
-        s * 0.3
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.beginPath();
-
-      ctx.ellipse(
-        0,
-        s * 0.3,
-        s * 0.65,
-        s * 0.18,
-        0,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-      ctx.fillStyle =
-        "rgba(155, 75, 32, 0.9)";
-
-      ctx.fillRect(
-        -s * 0.35,
-        s * 0.1,
-        s * 0.7,
-        s * 0.12
-      );
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // TOMBSTONE
-    // ==========================================================
-
-    function drawTombstone(p) {
-      const s =
-        p.size;
-
-      beginParticle(p);
-
-      ctx.fillStyle =
-        "rgba(70, 67, 76, 0.65)";
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        -s * 0.45,
-        s * 0.65
-      );
-
-      ctx.lineTo(
-        -s * 0.45,
-        -s * 0.15
-      );
-
-      ctx.arc(
-        0,
-        -s * 0.15,
-        s * 0.45,
-        Math.PI,
-        0
-      );
-
-      ctx.lineTo(
-        s * 0.45,
-        s * 0.65
-      );
-
-      ctx.closePath();
-
-      ctx.fill();
-
-      ctx.restore();
-    }
-
-    // ==========================================================
-    // DRAW PARTICLE
-    // ==========================================================
-
-    function drawParticle(p) {
-      switch (
-        p.type
-      ) {
-        case TYPE.LEAF:
-          drawLeaf(p);
-          break;
-
-        case TYPE.BAT:
-          drawBat(p);
-          break;
-
-        case TYPE.GHOST:
-          drawGhost(p);
-          break;
-
-        case TYPE.PUMPKIN:
-          drawPumpkin(p);
-          break;
-
-        case TYPE.SPIDER:
-          drawSpider(p);
-          break;
-
-        case TYPE.WEB:
-          drawWeb(p);
-          break;
-
-        case TYPE.MOON:
-          drawMoon(p);
-          break;
-
-        case TYPE.STAR:
-          drawStar(p);
-          break;
-
-        case TYPE.WITCH_HAT:
-          drawWitchHat(p);
-          break;
-
-        case TYPE.TOMBSTONE:
-          drawTombstone(p);
-          break;
-      }
-    }
-
-    // ==========================================================
-    // UPDATE
-    // ==========================================================
-
-    function updateParticle(p) {
-      p.phase +=
-        p.phaseSpeed;
-
-      p.life +=
-        0.015;
-
-      // --------------------------------------------------------
-      // LEAF
-      // --------------------------------------------------------
-
-      if (
-        p.type === TYPE.LEAF
-      ) {
-        p.y +=
-          p.speed;
-
-        p.x +=
-          Math.sin(
-            p.phase
-          ) *
-          p.drift *
-          0.3;
-
-        p.rotation +=
-          p.rotationSpeed;
-      }
-
-      // --------------------------------------------------------
-      // BAT
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.BAT
-      ) {
-        p.x +=
-          p.speed *
-          p.direction;
-
-        p.y +=
-          Math.sin(
-            p.phase
-          ) *
-          0.35;
-
-        p.rotation =
-          Math.sin(
-            p.phase
-          ) *
-          0.08;
-
-        if (
-          p.direction === 1 &&
-          p.x >
-            width + 100
-        ) {
-          Object.assign(
-            p,
-            createParticle(
-              TYPE.BAT
-            )
+          radius;
+
+        if (i === 0) {
+          ctx.moveTo(
+            x,
+            y
           );
-        }
-
-        if (
-          p.direction === -1 &&
-          p.x <
-            -100
-        ) {
-          Object.assign(
-            p,
-            createParticle(
-              TYPE.BAT
-            )
+        } else {
+          ctx.lineTo(
+            x,
+            y
           );
         }
       }
 
-      // --------------------------------------------------------
-      // GHOST
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.GHOST
-      ) {
-        p.y +=
-          p.speed;
-
-        p.x +=
-          Math.sin(
-            p.phase
-          ) *
-          p.drift *
-          0.2;
-
-        p.rotation =
-          Math.sin(
-            p.phase
-          ) *
-          0.04;
-
-        if (
-          p.y >
-            height + 80
-        ) {
-          Object.assign(
-            p,
-            createParticle(
-              TYPE.GHOST
-            )
-          );
-        }
-      }
-
-      // --------------------------------------------------------
-      // PUMPKIN
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.PUMPKIN
-      ) {
-        p.y +=
-          p.speed;
-
-        p.x +=
-          Math.sin(
-            p.phase
-          ) *
-          p.drift *
-          0.15;
-
-        p.rotation +=
-          p.rotationSpeed;
-
-        if (
-          p.y >
-            height + 80
-        ) {
-          Object.assign(
-            p,
-            createParticle(
-              TYPE.PUMPKIN
-            )
-          );
-        }
-      }
-
-      // --------------------------------------------------------
-      // SPIDER
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.SPIDER
-      ) {
-        p.y +=
-          p.speed;
-
-        if (
-          p.y >
-            p.threadLength
-        ) {
-          p.y =
-            p.threadLength;
-
-          p.speed *=
-            -1;
-        }
-
-        if (
-          p.y < 0
-        ) {
-          p.y = 0;
-
-          p.speed =
-            Math.abs(
-              p.speed
-            );
-        }
-      }
-
-      // --------------------------------------------------------
-      // WITCH HAT
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.WITCH_HAT
-      ) {
-        p.y +=
-          p.speed;
-
-        p.x +=
-          Math.sin(
-            p.phase
-          ) *
-          p.drift *
-          0.2;
-
-        p.rotation =
-          Math.sin(
-            p.phase
-          ) *
-          0.08;
-
-        if (
-          p.y >
-            height + 80
-        ) {
-          Object.assign(
-            p,
-            createParticle(
-              TYPE.WITCH_HAT
-            )
-          );
-        }
-      }
-
-      // --------------------------------------------------------
-      // STAR
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.STAR
-      ) {
-        p.opacity =
-          0.25 +
-          Math.sin(
-            p.life
-          ) *
-          0.18;
-      }
-
-      // --------------------------------------------------------
-      // MOON
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.MOON
-      ) {
-        p.x +=
-          Math.sin(
-            p.phase
-          ) *
-          0.05;
-      }
-
-      // --------------------------------------------------------
-      // WEB
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.WEB
-      ) {
-        p.rotation +=
-          p.rotationSpeed;
-      }
-
-      // --------------------------------------------------------
-      // TOMBSTONE
-      // --------------------------------------------------------
-
-      else if (
-        p.type === TYPE.TOMBSTONE
-      ) {
-        p.y +=
-          p.speed;
-
-        p.x +=
-          Math.sin(
-            p.phase
-          ) *
-          0.05;
-
-        if (
-          p.y >
-            height + 80
-        ) {
-          Object.assign(
-            p,
-            createParticle(
-              TYPE.TOMBSTONE
-            )
-          );
-        }
-      }
-
-      // --------------------------------------------------------
-      // GENERAL BOUNDS
-      // --------------------------------------------------------
-
-      if (
-        p.type !== TYPE.WEB &&
-        p.type !== TYPE.MOON &&
-        p.type !== TYPE.STAR &&
-        p.type !== TYPE.SPIDER
-      ) {
-        if (
-          p.x <
-            -150
-        ) {
-          p.x =
-            width + 50;
-        }
-
-        if (
-          p.x >
-            width + 150
-        ) {
-          p.x =
-            -50;
-        }
-      }
+      ctx.stroke();
     }
 
-    // ==========================================================
-    // ANIMATION LOOP
-    // ==========================================================
+    ctx.restore();
+  }
 
-    let animationFrame =
-      null;
+  // ============================================================
+  // DRAW: WITCH HAT
+  // ============================================================
 
-    let running =
-      true;
+  function drawWitchHat(p) {
+    const s =
+      getSize(p);
 
-    function animate() {
-      if (!running) {
-        return;
-      }
+    ctx.save();
 
-      ctx.clearRect(
-        0,
-        0,
-        width,
-        height
-      );
-
-      for (
-        let i = 0;
-        i < particles.length;
-        i++
-      ) {
-        const particle =
-          particles[i];
-
-        updateParticle(
-          particle
-        );
-
-        drawParticle(
-          particle
-        );
-      }
-
-      animationFrame =
-        requestAnimationFrame(
-          animate
-        );
-    }
-
-    // ==========================================================
-    // EVENT HANDLERS
-    // ==========================================================
-
-    function handleResize() {
-      resize();
-
-      initializeParticles();
-    }
-
-    window.addEventListener(
-      "resize",
-      handleResize,
-      {
-        passive: true
-      }
+    ctx.translate(
+      p.x,
+      p.y
     );
 
-    // ==========================================================
-    // PUBLIC API
-    // ==========================================================
+    ctx.rotate(
+      p.rotation
+    );
 
-    function destroy() {
-      log(
-        "Destroying Halloween Atmosphere."
-      );
+    applyAlpha(p);
 
-      running = false;
+    ctx.fillStyle =
+      "rgba(42, 28, 55, 0.98)";
 
-      if (
-        animationFrame !== null
-      ) {
-        cancelAnimationFrame(
-          animationFrame
+    // Cone
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      -s
+    );
+
+    ctx.lineTo(
+      s * 0.42,
+      s * 0.3
+    );
+
+    ctx.lineTo(
+      -s * 0.42,
+      s * 0.3
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    // Brim
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      0,
+      s * 0.3,
+      s * 0.65,
+      s * 0.18,
+      0,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    // Band
+
+    ctx.fillStyle =
+      "rgba(150, 74, 31, 1)";
+
+    ctx.fillRect(
+      -s * 0.35,
+      s * 0.1,
+      s * 0.7,
+      s * 0.13
+    );
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW: MOON
+  // ============================================================
+
+  function drawMoon(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    applyAlpha(p);
+
+    ctx.fillStyle =
+      "rgba(210, 198, 158, 0.95)";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      0,
+      0,
+      s,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.globalCompositeOperation =
+      "destination-out";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      s * 0.42,
+      -s * 0.18,
+      s * 0.9,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.globalCompositeOperation =
+      "source-over";
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW: STAR
+  // ============================================================
+
+  function drawStar(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    ctx.rotate(
+      p.rotation
+    );
+
+    applyAlpha(p);
+
+    ctx.fillStyle =
+      "rgba(220, 200, 145, 0.98)";
+
+    ctx.beginPath();
+
+    for (
+      let i = 0;
+      i < 8;
+      i++
+    ) {
+      const angle =
+        -Math.PI / 2 +
+        (Math.PI * 2 * i) /
+          8;
+
+      const radius =
+        i % 2 === 0
+          ? s
+          : s * 0.35;
+
+      const x =
+        Math.cos(angle) *
+        radius;
+
+      const y =
+        Math.sin(angle) *
+        radius;
+
+      if (i === 0) {
+        ctx.moveTo(
+          x,
+          y
+        );
+      } else {
+        ctx.lineTo(
+          x,
+          y
         );
       }
+    }
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW: TOMBSTONE
+  // ============================================================
+
+  function drawTombstone(p) {
+    const s =
+      getSize(p);
+
+    ctx.save();
+
+    ctx.translate(
+      p.x,
+      p.y
+    );
+
+    applyAlpha(p);
+
+    ctx.fillStyle =
+      "rgba(70, 67, 76, 0.9)";
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      -s * 0.45,
+      s * 0.65
+    );
+
+    ctx.lineTo(
+      -s * 0.45,
+      -s * 0.15
+    );
+
+    ctx.arc(
+      0,
+      -s * 0.15,
+      s * 0.45,
+      Math.PI,
+      0
+    );
+
+    ctx.lineTo(
+      s * 0.45,
+      s * 0.65
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    // Cross
+
+    ctx.strokeStyle =
+      "rgba(35, 32, 38, 0.75)";
+
+    ctx.lineWidth =
+      Math.max(
+        1,
+        s * 0.06
+      );
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      -s * 0.05
+    );
+
+    ctx.lineTo(
+      0,
+      s * 0.32
+    );
+
+    ctx.moveTo(
+      -s * 0.13,
+      s * 0.08
+    );
+
+    ctx.lineTo(
+      s * 0.13,
+      s * 0.08
+    );
+
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ============================================================
+  // DRAW PARTICLE
+  // ============================================================
+
+  function drawParticle(p) {
+    switch (p.type) {
+      case TYPE.LEAF:
+        drawLeaf(p);
+        break;
+
+      case TYPE.BAT:
+        drawBat(p);
+        break;
+
+      case TYPE.PUMPKIN:
+        drawPumpkin(p);
+        break;
+
+      case TYPE.GHOST:
+        drawGhost(p);
+        break;
+
+      case TYPE.SPIDER:
+        drawSpider(p);
+        break;
+
+      case TYPE.WEB:
+        drawWeb(p);
+        break;
+
+      case TYPE.WITCH_HAT:
+        drawWitchHat(p);
+        break;
+
+      case TYPE.MOON:
+        drawMoon(p);
+        break;
+
+      case TYPE.STAR:
+        drawStar(p);
+        break;
+
+      case TYPE.TOMBSTONE:
+        drawTombstone(p);
+        break;
+    }
+  }
+
+  // ============================================================
+  // UPDATE
+  // ============================================================
+
+  function updateParticle(p) {
+    p.y += p.speed;
+
+    p.driftPhase +=
+      p.driftSpeed;
+
+    p.x +=
+      Math.sin(
+        p.driftPhase
+      ) *
+      p.drift *
+      0.12;
+
+    p.rotation +=
+      p.rotationSpeed;
+
+    if (
+      p.y >
+      height + 120
+    ) {
+      Object.assign(
+        p,
+        createParticle(false)
+      );
+    }
+
+    if (
+      p.x <
+      -150
+    ) {
+      p.x =
+        width + 50;
+    }
+
+    if (
+      p.x >
+      width + 150
+    ) {
+      p.x =
+        -50;
+    }
+  }
+
+  // ============================================================
+  // ANIMATION
+  // ============================================================
+
+  let animationFrame;
+
+  function animate() {
+    ctx.clearRect(
+      0,
+      0,
+      width,
+      height
+    );
+
+    for (
+      let i = 0;
+      i < particles.length;
+      i++
+    ) {
+      const particle =
+        particles[i];
+
+      updateParticle(
+        particle
+      );
+
+      drawParticle(
+        particle
+      );
+    }
+
+    animationFrame =
+      requestAnimationFrame(
+        animate
+      );
+  }
+
+  animate();
+
+  // ============================================================
+  // PUBLIC API
+  // ============================================================
+
+  window.ShopBaseHalloweenEffect = {
+
+    destroy() {
+      cancelAnimationFrame(
+        animationFrame
+      );
 
       window.removeEventListener(
         "resize",
-        handleResize
+        resize
       );
 
       canvas.remove();
 
       particles.length = 0;
+    },
 
-      window.ShopBaseHalloweenEffect =
-        null;
-    }
-
-    function restart() {
-      log(
-        "Restarting Halloween Atmosphere."
+    restart() {
+      cancelAnimationFrame(
+        animationFrame
       );
 
-      running = false;
-
-      if (
-        animationFrame !== null
-      ) {
-        cancelAnimationFrame(
-          animationFrame
-        );
-      }
-
       initializeParticles();
-
-      running = true;
 
       animate();
-    }
+    },
 
-    function setIntensity(
-      value
-    ) {
-      const intensity =
-        Number(value);
-
-      if (
-        !Number.isFinite(
-          intensity
-        )
-      ) {
-        return;
-      }
-
+    setIntensity(value) {
       CONFIG.intensity =
-        clamp(
-          intensity,
+        Math.max(
           0,
-          2
+          Number(value) || 0
         );
 
-      log(
-        "Intensity:",
-        CONFIG.intensity
-      );
-
       initializeParticles();
+    },
+
+    setOpacity(value) {
+      CONFIG.opacity =
+        clamp(
+          Number(value) || 0,
+          0,
+          1
+        );
+    },
+
+    setSize(value) {
+      CONFIG.sizeMultiplier =
+        Math.max(
+          0,
+          Number(value) || 0
+        );
     }
-
-    // ==========================================================
-    // EXPOSE API
-    // ==========================================================
-
-    window.ShopBaseHalloweenEffect = {
-      initialized: true,
-
-      destroy,
-
-      restart,
-
-      setIntensity
-    };
-
-    log(
-      "Halloween Atmosphere v3 initialized."
-    );
-
-    log(
-      "Particles:",
-      particles.length
-    );
-
-    animate();
-  }
-
-  // ============================================================
-  // START SAFELY
-  // ============================================================
-
-  if (
-    document.readyState ===
-    "loading"
-  ) {
-    document.addEventListener(
-      "DOMContentLoaded",
-      init,
-      {
-        once: true
-      }
-    );
-  } else {
-    init();
-  }
+  };
 
 })();
