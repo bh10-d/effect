@@ -46,7 +46,7 @@
      * Overall opacity.
      */
     // opacity: 0.78,
-    opacity: 0.9,
+    opacity: 5,
 
     /*
      * Maximum number of particles.
