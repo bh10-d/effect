@@ -55,7 +55,7 @@
      * 2.0 = 2x
      * 3.0 = 3x
      */
-    sizeMultiplier: 1,
+    sizeMultiplier: 0.5,
 
     /*
      * Maximum number of particles.
