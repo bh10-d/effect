@@ -45,12 +45,14 @@
     /*
      * Overall opacity.
      */
-    opacity: 0.78,
+    // opacity: 0.78,
+    opacity: 0.9,
 
     /*
      * Maximum number of particles.
      */
-    maxParticles: 42,
+    // maxParticles: 42,
+    maxParticles: 70,
 
     /*
      * Mobile particle multiplier.
@@ -60,7 +62,8 @@
     /*
      * Animation speed.
      */
-    speed: 1,
+    // speed: 1,
+    speed: 1.3,
 
     /*
      * Canvas layer.
@@ -81,6 +84,8 @@
     leaf: true,
     tombstone: true
   };
+
+  const SIZE_MULTIPLIER = 2;
 
   // ============================================================
   // CONSTANTS
@@ -711,7 +716,7 @@
   // ============================================================
 
   function drawLeaf(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -787,7 +792,7 @@
   // ============================================================
 
   function drawBat(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -892,7 +897,7 @@
   // ============================================================
 
   function drawPumpkin(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -1024,7 +1029,7 @@
   // ============================================================
 
   function drawGhost(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -1105,7 +1110,7 @@
   // ============================================================
 
   function drawSpider(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -1196,7 +1201,7 @@
   // ============================================================
 
   function drawWeb(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -1295,7 +1300,7 @@
   // ============================================================
 
   function drawWitchHat(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -1371,7 +1376,7 @@
   // ============================================================
 
   function drawMoon(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -1425,7 +1430,7 @@
   // ============================================================
 
   function drawStar(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
@@ -1495,7 +1500,7 @@
   // ============================================================
 
   function drawTombstone(p) {
-    const s = p.size;
+    const s = p.size * SIZE_MULTIPLIER;
 
     ctx.save();
 
