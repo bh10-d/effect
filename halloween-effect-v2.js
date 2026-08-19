@@ -86,6 +86,7 @@
   };
 
   const SIZE_MULTIPLIER = 0.001;
+  console.log("🔥 HALLOWEEN V3 LOADED", SIZE_MULTIPLIER, Date.now());
 
   // ============================================================
   // CONSTANTS
