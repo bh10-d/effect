@@ -46,13 +46,13 @@
      * Overall opacity.
      */
     // opacity: 0.78,
-    opacity: 5,
+    opacity: 1,
 
     /*
      * Maximum number of particles.
      */
     // maxParticles: 42,
-    maxParticles: 70,
+    maxParticles: 50,
 
     /*
      * Mobile particle multiplier.
