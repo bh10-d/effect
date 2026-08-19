@@ -57,7 +57,7 @@
     /*
      * Mobile particle multiplier.
      */
-    mobileMultiplier: 0.001,
+    mobileMultiplier: 0.5,
 
     /*
      * Animation speed.
@@ -85,7 +85,7 @@
     tombstone: true
   };
 
-  const SIZE_MULTIPLIER = 0.35;
+  const SIZE_MULTIPLIER = 0.5;
   console.log("HALLOWEEN V2 LOADED", SIZE_MULTIPLIER, Date.now());
 
   // ============================================================
