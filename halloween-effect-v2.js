@@ -52,7 +52,7 @@
      * Maximum number of particles.
      */
     // maxParticles: 42,
-    maxParticles: 50,
+    maxParticles: 40,
 
     /*
      * Mobile particle multiplier.
@@ -85,7 +85,7 @@
     tombstone: true
   };
 
-  const SIZE_MULTIPLIER = 1;
+  const SIZE_MULTIPLIER = 0.5;
 
   // ============================================================
   // CONSTANTS
