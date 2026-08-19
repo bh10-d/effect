@@ -85,7 +85,7 @@
     tombstone: true
   };
 
-  const SIZE_MULTIPLIER = 0.5;
+  const SIZE_MULTIPLIER = 1;
   console.log("HALLOWEEN V2 LOADED", SIZE_MULTIPLIER, Date.now());
 
   // ============================================================
