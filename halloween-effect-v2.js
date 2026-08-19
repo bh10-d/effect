@@ -85,7 +85,7 @@
     tombstone: true
   };
 
-  const SIZE_MULTIPLIER = 2;
+  const SIZE_MULTIPLIER = 1;
 
   // ============================================================
   // CONSTANTS
