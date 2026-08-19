@@ -57,7 +57,7 @@
     /*
      * Mobile particle multiplier.
      */
-    mobileMultiplier: 0.5,
+    mobileMultiplier: 0.1,
 
     /*
      * Animation speed.
@@ -85,7 +85,7 @@
     tombstone: true
   };
 
-  const SIZE_MULTIPLIER = 0.5;
+  const SIZE_MULTIPLIER = 0.1;
 
   // ============================================================
   // CONSTANTS
